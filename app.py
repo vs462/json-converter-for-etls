@@ -3,16 +3,16 @@ import streamlit as st
 import pandas as pd
 import base64
 import converter as cnv
+
 st.set_page_config(layout="wide")
-#       json.dump(final_names, outfile)
+st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
 st.markdown("""
 <style>
 .small-font {
-    font-size:10px !important;
+    font-size:200px !important;
 }
 </style>
 """, unsafe_allow_html=True)
-#st.markdown('<p class="small-font"> some string </p>', unsafe_allow_html=True)
 
 st.title('JSON to Huginn names converter')
    
@@ -25,9 +25,6 @@ def download_link(object_to_download, download_filename, download_link_text):
     b64 = base64.b64encode(object_to_download.encode()).decode() # some strings <-> bytes conversions necessary here    
     return f'<a href="data:file/txt;base64,{b64}" download="{download_filename}">{download_link_text}</a>'
 
-
-    
-    
 def display_huginn_names(hugin_names_result):    
     with st.beta_expander("See full result"):
          st.write(hugin_names_result)
@@ -45,44 +42,89 @@ def display_huginn_names(hugin_names_result):
 def only_selected_keys(df, select_keys):
     for col in df.columns:
         select_keys.button(col)
-        #select_keys.markdown(df[col], unsafe_allow_html=True)
-    
-def display_table(responses, hugin_names_result):   
-    to_table_container = st.beta_expander('Convert to a table')
-    check_names = st.beta_expander('Check names between the table and generated json')
-    select_keys = st.beta_expander('Select keys to include')
-    unselect_keys = st.beta_expander('Select keys to exclude')
-     
-    if to_table_container or check_names:
-        df = cnv.convert_to_table(responses)
-    
-    if to_table_container:
-        tmp_download_link = download_link(df, 'YOUR_DF.csv', 'Download as csv')
-        to_table_container.markdown(tmp_download_link, unsafe_allow_html=True)
-        to_table_container.dataframe(df.style)
 
-    if check_names:
-        keys = [key for key in hugin_names_result]        
-        cols = [col for col in df.columns]        
-        missing = set(cols) - set(keys)
-        st.markdown(f'missing keys: {missing}', unsafe_allow_html=True)
+def choose_keys(df, expander, include = True):
+    expander = expander
+    if include: 
+        for col in df.columns: 
+                    include = expander.checkbox(f'Include {col}')
+                    if include:
+                        expand = expander.button(f'view {col}')                                            
+                        if expand:
+                            expand = expander.button(f'close {col} view')
+                            all_values = [val for val in df[col]]
+                            expander.markdown(all_values, unsafe_allow_html=True)    
+    else:
+                for col in df.columns: 
+                    include = expander.checkbox(f'Exclude {col}')
+                    if include:
+                        expand = expander.button(f'view {col}')                                            
+                        if expand:
+                            expand = expander.button(f'close {col} view')
+                            all_values = [val for val in df[col]]
+                            expander.markdown(all_values, unsafe_allow_html=True) 
+
+def choose_keys2(df,  include = True):
+    expander = st
+    prefix = 'include' if include  else 'exclude'
     
-    if select_keys:
-        #only_selected_keys(df, select_keys)
-        for col in df.columns:
-            expand = select_keys.button(col)
+    for col in df.columns: 
+        select_col = expander.checkbox(f'{prefix} {col}')
+        if select_col:
+            expand = expander.button(f'view {col}') 
             if expand:
-                select_keys.markdown(df[col], unsafe_allow_html=True)
+                expand = expander.button(f'close {col} view')
+                all_values = [val for val in df[col]]
+                expander.markdown(all_values, unsafe_allow_html=True)
+            
+                                                      
+def display_table(responses, hugin_names_result):
+    
+    further = st.checkbox('Further investigation')
+    
+    if further:
+        to_table_container = st.beta_expander('Convert to a table')
+        check_names = st.beta_expander('Check names between the table and generated json')
+        # select_keys = st.beta_expander('Select keys to include')
+        # unselect_keys = st.beta_expander('Select keys to exclude')
+           
+        mofify_keys = st.selectbox('',('Modify keys','Select keys to exclude', 'Select keys to include'))
+
+        df = cnv.convert_to_table(responses)
         
+        if to_table_container:
+            tmp_download_link = download_link(df, 'YOUR_DF.csv', 'Download as csv')
+            to_table_container.markdown(tmp_download_link, unsafe_allow_html=True)
+            to_table_container.dataframe(df.style)
+    
+        if check_names:
+            keys = [key for key in hugin_names_result]        
+            cols = [col for col in df.columns]        
+            missing_json = [key for key in (set(keys) - set(cols))]
+            #missing_json = ''.join(str(e) for e in missing_json)
+            missing_table = [key for key in (set(cols) - set(keys))]
+            check_names.markdown(f'Present in the table not genereted json: {missing_json}', unsafe_allow_html=True)
+            check_names.markdown(f'Present in table not genereted json: {missing_table}', unsafe_allow_html=True)
+        
+        # if select_keys:
+        #     choose_keys(df, select_keys, include = True)
+          
+        # if unselect_keys:
+        #     choose_keys(df, unselect_keys, include = False)
+        #     select_keys = None
+            
+        if mofify_keys =='Select keys to exclude':
+            choose_keys2(df, include = False)
+        elif mofify_keys =='Select keys to include':
+            choose_keys2(df, include = True)
+                
     
 def load_data(responses):
     data_load_state = st.text('Loading data...')
     loop = st.checkbox('Loop through all responses (might take a while, otherwise only the first response will be added)')
     
-    if loop:
-        hugin_names_result = cnv.converter_full(responses)
-    else: 
-        hugin_names_result = cnv.converter(responses)        
+    hugin_names_result = cnv.converter(responses, loop = loop)
+      
     data_load_state.text('Loading data... Done!')    
     display_huginn_names(hugin_names_result)
     display_table(responses, hugin_names_result)
@@ -112,18 +154,19 @@ def initialise():
                 st.markdown(f"Wrong JSON format. Error: {e}", unsafe_allow_html=True)        
     else:
         st.markdown('CSV uploads are not yet allowed, sorry', unsafe_allow_html=True)
-
-    
+ 
         
 initialise()
 
 
-classifier_name = st.sidebar.selectbox(
-    'Select classifier',
-    ('KNN', 'SVM', 'Random Forest')
-)
+
+# classifier_name = st.sidebar.selectbox(
+#     'Select classifier',
+#     ('KNN', 'SVM', 'Random Forest'))
 
 
+
+#st.markdown('<p class="small-font"> some string </p>', unsafe_allow_html=True)
 
 
 
