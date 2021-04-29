@@ -1,5 +1,5 @@
 import re
-import streamlit as st
+#import streamlit as st
 from pandas.io.json import json_normalize
 
 def merge_keys(dic, sep = '_'):  
@@ -40,8 +40,14 @@ def huginn_names(unpacked_dic):
 
 
 def converter(responses, loop = False):   
-    if type(responses) is list:            
-        unpacked_dic = merge_keys(responses[0], sep ='.')
+    if type(responses) is list:  
+        if loop:
+            unpacked_dic = {}
+            for single_resp in responses:
+                unpacked_dic_i = merge_keys(single_resp, sep ='.')
+                unpacked_dic.update(unpacked_dic_i)
+        else:  
+            unpacked_dic = merge_keys(responses[0], sep ='.')
     else:
         unpacked_dic = merge_keys(responses, sep ='.')
     final_names =  huginn_names(unpacked_dic)
