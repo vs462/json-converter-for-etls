@@ -149,7 +149,49 @@ def select_keys(responses, hugin_names_result):
     elif mofify_keys =='Select keys to include':
         choose_keys(responses, hugin_names_result, include = True)
               
+def choose_keys(responses, hugin_names_result, include):
+    prefix = 'include' if include  else 'exclude' 
+    selected_keys = []
 
+    all_keys = [key for key in hugin_names_result]
+    all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]
+    
+    for key, path in zip(all_keys, all_path):
+        select_key = st.checkbox(f'{prefix} "{key}"')
+        
+        if select_key:
+            selected_keys.append(key)
+            expand = st.button(f'view {key}') 
+            if expand:
+                expand = st.button(f'close {key} view')
+                uniques_val, table_counts = cnv.values_investigation(responses, path)                
+                st.markdown(f'{uniques_val[0]} unique values out of {uniques_val[1]}', unsafe_allow_html=True) 
+                st.dataframe(table_counts.style) 
+                
+    modifyed_names(selected_keys, hugin_names_result, include = include) 
+      
+def modifyed_names(selected_keys, hugin_names_result, include = True): 
+    if not include:
+        all_keys = [key for key in hugin_names_result]
+        selected_keys = list(set(all_keys) - set(selected_keys))
+
+    new_dic = { new_key: hugin_names_result[new_key] for new_key in selected_keys }    
+    display_huginn_names(new_dic, file_name = 'huginn_names.json', csv = False)
+   
+def meta_segm(selected_keys, hugin_names_result, include = True): 
+    st.markdown('## Split into segments/meta', unsafe_allow_html=True) 
+    
+    choose_meta = st.checkbox('Select keys')
+    
+    if choose_meta:
+        all_keys = [key for key in hugin_names_result]
+        all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]
+        
+        for key, path in zip(all_keys, all_path):
+            
+            #select_key = st.checkbox(f'{prefix} "{key}"')
+            key
+            met_or_seg = st.radio('', (f'Segment ({key})', f'Meta ({key})'))
 
 initialise()
 
