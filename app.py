@@ -4,17 +4,6 @@ import pandas as pd
 import base64
 import converter as cnv
 
-import time
-from datetime import datetime
-
-
-def expensive_computation():
-    time.sleep(1)  # This makes the function take 2s to run
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    st.write(f"BACK TO LIVE {current_time}")
-    st.markdown(f"BACK TO LIVE {current_time}")
-
 
 st.set_page_config(layout="wide")
 st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
@@ -28,59 +17,39 @@ st.markdown("""
 
 st.title('JSON to Huginn names converter')
 
-def load_jsonl(input_list) -> list:
-    """
-    Read list of objects from a JSON lines file.
-    """
-    data = []
-    for line in input_list:
-        line =str(line)
-        data.append(json.loads(line.rstrip('\n|\r')))
-    return data
+def expensive_computation():
+    """ For performance testing """
+    import time
+    from datetime import datetime
+    time.sleep(1)  # This makes the function take 2s to run
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    st.write(f"BACK TO LIVE {current_time}")
+    st.markdown(f"BACK TO LIVE {current_time}")
+    
   
 def initialise():
-    #col1, col2, col3 = st.beta_columns(3)
     js_upload, jsl_upload, js_raw, csv_upload = 'JSON Upload','JSONL Upload', 'JSON Raw', 'CSV Upload'            
     way_to_add = st.radio("Add your data", (js_upload, jsl_upload, js_raw, csv_upload))
-
     if way_to_add == js_upload:
-        user_file = st.file_uploader("Upload json file", type="json") 
+        user_file = st.file_uploader("Upload JSON file", type="json") 
         if user_file:
-            #user_input = None
             responses = json.load(user_file) 
-            load_data(responses)     
-    
+            load_data(responses)  
+            
     elif way_to_add == jsl_upload:
-        user_file = st.file_uploader("Upload json file", type="jsonl") 
-        if user_file:
-            to_list = list(user_file)
-            
-            for json_str in to_list:
-                x = str(json_str)
-                json_strip = json_str.strip('\n|\r')
+        responses = []
+        user_file = st.file_uploader("Upload JSONL file", type="jsonl") 
+        if user_file:           
+            for json_str in list(user_file) :                
                 result = json.loads(json_str)
-                st.markdown(json_strip)
-                st.markdown(json_str)
-     
-            st.markdown(to_list)
-            st.markdown(type(to_list))
-            
-            func = load_jsonl(to_list)
-            
-            responses = json.loads(func) 
+                responses.append(result)
             load_data(responses) 
-            
 
-            for json_str in to_list:
-                result = json.loads(json_str)
- 
-        
-    
     elif way_to_add == js_raw:    
         user_input = st.text_area("Or just paste a response")
         
         if user_input:
-            user_file = None
             try:
                 responses = json.loads(user_input)
                 load_data(responses)
@@ -201,10 +170,7 @@ def choose_keys(df, include = True):
                 expand = expander.button(f'close {col} view')
                 uniq_vals = len(df[col].unique())
                 expander.markdown(f'{uniq_vals} unique values out of {df.shape[0]}', unsafe_allow_html=True)
-
-                    
-                    
- 
+  
 initialise()
 
 table_data = {'Column 1': [1, 2], 'Column 2': [3, 4]}
