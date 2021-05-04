@@ -1,6 +1,11 @@
 @import 
 url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap');
 
+body {
+    color: red;
+    background: red;
+    background-color: red;
+}
 
 .keys-font {
 	text-align: left;
@@ -18,7 +23,8 @@ url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap')
 .header{
 	text-align: left;
     background-color: white;
-    font-size: 30px
+    font-size: 30px;
+    margin-top: 1em;
 }
 .error{
 	text-align: left;
@@ -38,5 +44,27 @@ url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap')
 
 .stTextInput>div>div>input {
     color: #4F8BF9;
+}
+
+.Widget>label {
+    color: red;
+    font-family: monospace;
+}
+
+[class^="st-b"]  {
+    color: auto;
+    font-family: monospace;
+}
+.st-bb {
+    background-color: auto;
+}
+.st-at {
+    background-color: auto;
+}
+footer {
+    font-family: monospace;
+}
+.reportview-container .main footer, .reportview-container .main footer a {
+    color: #0c0080;
 }
 
