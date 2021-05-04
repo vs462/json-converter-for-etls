@@ -6,16 +6,9 @@ import converter as cnv
 
 st.set_page_config(layout="wide")
 st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True) # make buttons display horizontally 
-st.markdown("""
-<style>
-.big-font {
-    font-size:20px !important;
-}
-</style>
-""", unsafe_allow_html=True)
 
+st.markdown('<style>' + open('styles.css').read() + '</style>', unsafe_allow_html=True)
 st.title('JSON to Huginn names converter')
-
   
 def initialise():    
     js_upload, jsl_upload, js_raw, csv_upload = 'JSON Upload','JSONL Upload', 'Raw JSON', 'CSV Upload'
@@ -45,7 +38,7 @@ def initialise():
                 responses = json.loads(user_input)
                 load_data(responses)
             except Exception as e:
-                st.markdown(f"Wrong JSON format. Error: {e}", unsafe_allow_html=True)        
+                st.markdown(f'<p class="error">Wrong JSON format. Error: {e} </p>', unsafe_allow_html=True)        
     else:
         user_file = st.file_uploader("Upload a CSV/Excel file") 
         if user_file:
@@ -72,7 +65,7 @@ def load_data(responses):
     resp_id = st.checkbox('Convert "id" to "response_id" (if applicable)')
     hugin_names_result = cnv.converter(responses, loop = loop, resp_id = resp_id)    
     data_load_state.text('Loading data... Done!')      
-    st.markdown("## Convert all", unsafe_allow_html=True) 
+    st.markdown('<p class="header"> Convert all </p>', unsafe_allow_html=True) 
     display_huginn_names(hugin_names_result, csv = csv)
     display_table(responses, hugin_names_result)
     select_keys(responses, hugin_names_result)
@@ -89,7 +82,6 @@ def display_huginn_names(hugin_names_result, file_name = 'huginn_names.json', cs
     if csv:
         for res in hugin_names_result:
             hugin_names_result[res]['value'] = hugin_names_result[res]['value'].replace('{{', '{{data.')
-  
     with st.beta_expander("See full result"):
         st.write(hugin_names_result)
    
@@ -101,12 +93,10 @@ def display_huginn_names(hugin_names_result, file_name = 'huginn_names.json', cs
 @st.cache(suppress_st_warning=True) 
 def turn_to_table(responses):
     df = cnv.convert_to_table(responses)
-    expensive_computation()
-    return df
-      
+    return df 
                                                         
 def display_table(responses, hugin_names_result):  
-    st.markdown(' ## Convert to a table', unsafe_allow_html=True)
+    st.markdown(' <p class="header">  Convert to a table </p>', unsafe_allow_html=True)
     cov_to_table = st.checkbox('Convert')
     if cov_to_table:
         df = turn_to_table(responses)            
@@ -122,14 +112,12 @@ def display_table(responses, hugin_names_result):
             keys = [key for key in hugin_names_result]        
             cols = [col for col in df.columns]        
             missing_json = [key for key in (set(keys) - set(cols))]
-            #missing_json = ''.join(str(e) for e in missing_json)
             missing_table = [key for key in (set(cols) - set(keys))]
             check_names.markdown(f'Present in the table not genereted json: {missing_json}', unsafe_allow_html=True)
             check_names.markdown(f'Present in table not genereted json: {missing_table}', unsafe_allow_html=True)   
 
-
 def select_keys(responses, hugin_names_result):    
-    st.markdown('## Modify keys', unsafe_allow_html=True) 
+    st.markdown('<p class="header">  Modify keys </p>', unsafe_allow_html=True) 
     mofify_keys = st.radio('', ('No modifications', 'Select keys to exclude', 'Select keys to include'))            
     if mofify_keys =='Select keys to exclude':
         choose_keys(responses, hugin_names_result, include = False)      
@@ -150,19 +138,19 @@ def choose_keys(responses, hugin_names_result, include):
                 expand = st.button(f'close {key} view')
                 uniques_val, table_counts = cnv.values_investigation(responses, path)                
                 st.markdown(f'{uniques_val[0]} unique values out of {uniques_val[1]}', unsafe_allow_html=True) 
-                st.dataframe(table_counts.style)           
+                st.dataframe(table_counts)           
     if not include:
         all_keys = [key for key in hugin_names_result]
         selected_keys = list(set(all_keys) - set(selected_keys))
+        
     new_dic = { new_key: hugin_names_result[new_key] for new_key in selected_keys }  
     display_huginn_names(new_dic, file_name = 'huginn_names.json', csv = False)
     #meta_segm(responses, new_dic)
-  
 
 def meta_segm(responses, hugin_names_result): 
-    st.markdown('## Split into segments/meta', unsafe_allow_html=True) 
+    st.markdown('<p class="header">  Split into segments/meta </p', unsafe_allow_html=True) 
     choose_meta = st.radio('', ('No modification', 'Select all', 'Unselect all'))
-    
+
     if choose_meta == 'Select all' or choose_meta == 'Unselect all':        
         all_keys = [key for key in hugin_names_result]
         all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]
@@ -170,8 +158,12 @@ def meta_segm(responses, hugin_names_result):
         meta_fields = {}
         segments ={}
         
-        for key, path in zip(all_keys, all_path):            
-            st.write(key)
+        for key, path in zip(all_keys, all_path):    
+            st.markdown('<p class="sep-line"> </p>', unsafe_allow_html=True)
+            col1, col2 = st.beta_columns(2)
+
+            st.markdown(f'<p class="keys-font"> {key}</p>', unsafe_allow_html=True)
+            
             radio_name = (f'Meta ({key})', f'Segment ({key})', f'Exclude ({key})') if choose_meta=='Select all' else (f'Exclude ({key})', f'Meta ({key})', f'Segment ({key})')
             met_or_seg = st.radio('', radio_name)
             
@@ -180,27 +172,24 @@ def meta_segm(responses, hugin_names_result):
                 expand2 = st.button(f'close {key} view')
                 uniques_val, table_counts = cnv.values_investigation(responses, path)                
                 st.markdown(f'{uniques_val[0]} unique values out of {uniques_val[1]}', unsafe_allow_html=True) 
-                st.dataframe(table_counts.style) 
+                st.dataframe(table_counts) 
 
             if met_or_seg == f'Segment ({key})':
                 segments[key] = hugin_names_result[key]
             else:
                 meta_fields[key] = hugin_names_result[key]         
 
-       
-        with st.beta_expander("See meta"):
-                st.write(meta_fields)
-        with st.beta_expander("See segments"):
-                st.write(segments)
+        with st.beta_expander("Manually change meta"):
+                # for key in meta_fields:
+                #     new_meta_keys = st.text_input('', key)
+                #     new_meta_fields = st.text_area('', meta_fields[key])
+                    
+                meta_fields = st.text_area("", meta_fields)
+                
+        with st.beta_expander("Manually change segments"):
+                segments = st.text_area("", segments)  
     
-def select_keys2(responses, hugin_names_result):    
-    st.markdown('## Modify keys', unsafe_allow_html=True) 
-    mofify_keys = st.radio('', ('No modifications1', 'Select keys to exclude1', 'Select keys to include1'))            
-    if mofify_keys =='Select keys to exclude':
-        choose_keys(responses, hugin_names_result, include = False)
-            
-    elif mofify_keys =='Select keys to include':
-        choose_keys(responses, hugin_names_result, include = True)
+
 
 
 initialise()
@@ -224,5 +213,27 @@ initialise()
 # #st.markdown('<p class="small-font"> some string </p>', unsafe_allow_html=True)
 # if st.button('put to sleep'):
 #     expensive_computation()
+
+def local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+def remote_css(url):
+    st.markdown(f'<link href="{url}" rel="stylesheet">', unsafe_allow_html=True)    
+
+def icon(icon_name):
+    st.markdown(f'<i class="material-icons">{icon_name}</i>', unsafe_allow_html=True)
+
+#local_css("styles.css")
+remote_css('https://fonts.googleapis.com/icon?family=Material+Icons')
+
+# icon("search")
+
+# button_clicked = st.button("OK")
+
+
+
+
+
 
 
