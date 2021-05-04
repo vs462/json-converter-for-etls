@@ -1,0 +1,28 @@
+@import 
+url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap');
+
+.keys-font {
+	text-align: left;
+	font-family: Oranienbaum, serif;
+    background-color: white;
+    text-transform: uppercase;
+    font-size:15px !important;
+}
+
+.sep-line{ 
+    border: 1px solid #000;
+    width: 100%; 
+    margin-right: 10em;}
+
+.header{
+	text-align: left;
+    background-color: white;
+    font-size: 30px
+}
+.error{
+	text-align: left;
+	font-family: Oranienbaum, serif;
+	color: red;
+    background-color: white;
+    font-size: 15px
+}
