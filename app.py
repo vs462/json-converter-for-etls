@@ -16,16 +16,7 @@ st.markdown("""
 
 st.title('JSON to Huginn names converter')
 
-def expensive_computation():
-    """ For performance testing """
-    import time
-    from datetime import datetime
-    time.sleep(1)  # This makes the function take 2s to run
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    st.write(f"BACK TO LIVE {current_time}")
-    st.markdown(f"BACK TO LIVE {current_time}")
-     
+  
 def initialise():    
     js_upload, jsl_upload, js_raw, csv_upload = 'JSON Upload','JSONL Upload', 'Raw JSON', 'CSV Upload'
     way_to_add = st.radio("Choose format", (js_upload, jsl_upload, js_raw, csv_upload))
@@ -79,13 +70,9 @@ def load_data(responses):
     loop = st.checkbox('Loop through all responses (might take a while, otherwise only the first response will be added)')    
     csv = st.checkbox('Add "data" prefix to values')
     resp_id = st.checkbox('Convert "id" to "response_id" (if applicable)')
-
-    hugin_names_result = cnv.converter(responses, loop = loop, resp_id = resp_id)
-    
-    data_load_state.text('Loading data... Done!')  
-    
-    st.markdown("## Basic conversion", unsafe_allow_html=True) 
-
+    hugin_names_result = cnv.converter(responses, loop = loop, resp_id = resp_id)    
+    data_load_state.text('Loading data... Done!')      
+    st.markdown("## Convert all", unsafe_allow_html=True) 
     display_huginn_names(hugin_names_result, csv = csv)
     display_table(responses, hugin_names_result)
     select_keys(responses, hugin_names_result)
@@ -140,25 +127,22 @@ def display_table(responses, hugin_names_result):
             check_names.markdown(f'Present in the table not genereted json: {missing_json}', unsafe_allow_html=True)
             check_names.markdown(f'Present in table not genereted json: {missing_table}', unsafe_allow_html=True)   
 
+
 def select_keys(responses, hugin_names_result):    
     st.markdown('## Modify keys', unsafe_allow_html=True) 
     mofify_keys = st.radio('', ('No modifications', 'Select keys to exclude', 'Select keys to include'))            
     if mofify_keys =='Select keys to exclude':
-        choose_keys(responses, hugin_names_result, include = False)
-            
+        choose_keys(responses, hugin_names_result, include = False)      
     elif mofify_keys =='Select keys to include':
         choose_keys(responses, hugin_names_result, include = True)
               
 def choose_keys(responses, hugin_names_result, include):
-    prefix = 'include' if include  else 'exclude' 
+    prefix = 'include' if include  else 'exclude'         
     selected_keys = []
-
     all_keys = [key for key in hugin_names_result]
-    all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]
-    
+    all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]    
     for key, path in zip(all_keys, all_path):
         select_key = st.checkbox(f'{prefix} "{key}"')
-        
         if select_key:
             selected_keys.append(key)
             expand = st.button(f'view {key}') 
@@ -166,32 +150,58 @@ def choose_keys(responses, hugin_names_result, include):
                 expand = st.button(f'close {key} view')
                 uniques_val, table_counts = cnv.values_investigation(responses, path)                
                 st.markdown(f'{uniques_val[0]} unique values out of {uniques_val[1]}', unsafe_allow_html=True) 
-                st.dataframe(table_counts.style) 
-                
-    modifyed_names(selected_keys, hugin_names_result, include = include) 
-      
-def modifyed_names(selected_keys, hugin_names_result, include = True): 
+                st.dataframe(table_counts.style)           
     if not include:
         all_keys = [key for key in hugin_names_result]
         selected_keys = list(set(all_keys) - set(selected_keys))
-
-    new_dic = { new_key: hugin_names_result[new_key] for new_key in selected_keys }    
+    new_dic = { new_key: hugin_names_result[new_key] for new_key in selected_keys }  
     display_huginn_names(new_dic, file_name = 'huginn_names.json', csv = False)
-   
-def meta_segm(selected_keys, hugin_names_result, include = True): 
+    #meta_segm(responses, new_dic)
+  
+
+def meta_segm(responses, hugin_names_result): 
     st.markdown('## Split into segments/meta', unsafe_allow_html=True) 
+    choose_meta = st.radio('', ('No modification', 'Select all', 'Unselect all'))
     
-    choose_meta = st.checkbox('Select keys')
-    
-    if choose_meta:
+    if choose_meta == 'Select all' or choose_meta == 'Unselect all':        
         all_keys = [key for key in hugin_names_result]
         all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]
         
-        for key, path in zip(all_keys, all_path):
+        meta_fields = {}
+        segments ={}
+        
+        for key, path in zip(all_keys, all_path):            
+            st.write(key)
+            radio_name = (f'Meta ({key})', f'Segment ({key})', f'Exclude ({key})') if choose_meta=='Select all' else (f'Exclude ({key})', f'Meta ({key})', f'Segment ({key})')
+            met_or_seg = st.radio('', radio_name)
             
-            #select_key = st.checkbox(f'{prefix} "{key}"')
-            key
-            met_or_seg = st.radio('', (f'Segment ({key})', f'Meta ({key})'))
+            expand2 = st.button(f'expand {key}') 
+            if expand2:
+                expand2 = st.button(f'close {key} view')
+                uniques_val, table_counts = cnv.values_investigation(responses, path)                
+                st.markdown(f'{uniques_val[0]} unique values out of {uniques_val[1]}', unsafe_allow_html=True) 
+                st.dataframe(table_counts.style) 
+
+            if met_or_seg == f'Segment ({key})':
+                segments[key] = hugin_names_result[key]
+            else:
+                meta_fields[key] = hugin_names_result[key]         
+
+       
+        with st.beta_expander("See meta"):
+                st.write(meta_fields)
+        with st.beta_expander("See segments"):
+                st.write(segments)
+    
+def select_keys2(responses, hugin_names_result):    
+    st.markdown('## Modify keys', unsafe_allow_html=True) 
+    mofify_keys = st.radio('', ('No modifications1', 'Select keys to exclude1', 'Select keys to include1'))            
+    if mofify_keys =='Select keys to exclude':
+        choose_keys(responses, hugin_names_result, include = False)
+            
+    elif mofify_keys =='Select keys to include':
+        choose_keys(responses, hugin_names_result, include = True)
+
 
 initialise()
 
