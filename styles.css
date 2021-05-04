@@ -1,6 +1,7 @@
 @import 
 url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap');
 
+
 .keys-font {
 	text-align: left;
 	font-family: Oranienbaum, serif;
@@ -26,3 +27,16 @@ url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap')
     background-color: white;
     font-size: 15px
 }
+
+.stButton>button {
+    color: black;
+    border-radius: 0%;
+    height: 1.5em;
+    text-align: left;
+
+}
+
+.stTextInput>div>div>input {
+    color: #4F8BF9;
+}
+
