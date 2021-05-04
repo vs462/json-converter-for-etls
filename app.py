@@ -235,5 +235,3 @@ remote_css('https://fonts.googleapis.com/icon?family=Material+Icons')
 
 
 
-
-
