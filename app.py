@@ -11,7 +11,7 @@ st.markdown('<style>' + open('styles.css').read() + '</style>', unsafe_allow_htm
 st.title('JSON to Huginn names converter')
   
 def initialise():    
-    js_upload, jsl_upload, js_raw, csv_upload = 'JSON Upload','JSONL Upload', 'Raw JSON', 'CSV Upload'
+    js_upload, jsl_upload, js_raw, csv_upload = 'JSON Upload','JSONL Upload', 'Raw JSON', 'CSV/Excel Upload'
     way_to_add = st.radio("Choose format", (js_upload, jsl_upload, js_raw, csv_upload))
     if way_to_add == js_upload:
         user_file = st.file_uploader("Upload JSON file", type="json")
@@ -57,16 +57,24 @@ def initialise():
             else:
                 st.warning("you need to upload a csv or excel file.")
             
-
+def add_data_str(responses):   
+    """ Add 'data' in front of each response """
+    
+    new_responses = [{'data':resp} for resp in responses]
+    return new_responses
+    
+    
 def load_data(responses):
     data_load_state = st.text('Loading data...')
-    loop = st.checkbox('Loop through all responses (might take a while, otherwise only the first response will be added)')    
+    loop = st.checkbox('Loop through all responses (might take a while, otherwise only the first response will be added)')            
     csv = st.checkbox('Add "data" prefix to values')
-    resp_id = st.checkbox('Convert "id" to "response_id" (if applicable)')
+    resp_id = st.checkbox('Convert "id" to "response_id" (if applicable)')    
+    responses = add_data_str(responses) if csv else responses
     hugin_names_result = cnv.converter(responses, loop = loop, resp_id = resp_id)    
     data_load_state.text('Loading data... Done!')      
     st.markdown('<p class="header"> Convert all </p>', unsafe_allow_html=True) 
-    display_huginn_names(hugin_names_result, csv = csv)
+    
+    display_huginn_names(hugin_names_result)
     display_table(responses, hugin_names_result)
     select_keys(responses, hugin_names_result)
     meta_segm(responses, hugin_names_result)
@@ -78,16 +86,13 @@ def download_link(object_to_download, download_filename, download_link_text):
     return f'<a href="data:file/txt;base64,{b64}" download="{download_filename}">{download_link_text}</a>'
 
 
-def display_huginn_names(hugin_names_result, file_name = 'huginn_names.json', csv = False):  
-    if csv:
-        for res in hugin_names_result:
-            hugin_names_result[res]['value'] = hugin_names_result[res]['value'].replace('{{', '{{data.')
+def display_huginn_names(object_to_download, file_name = 'huginn_names.json',  download_link_text = 'Click here to download your file'):  
     with st.beta_expander("See full result"):
-        st.write(hugin_names_result)
+        st.write(object_to_download)
    
     with st.beta_expander("Download as JSON file"):
-            huginn_names_json = json.dumps(hugin_names_result)
-            tmp_download_link = download_link(huginn_names_json, file_name, 'Click here to download your file')
+            object_to_download = json.dumps(object_to_download)
+            tmp_download_link = download_link(object_to_download, file_name, 'Click here to download your file')
             st.markdown(tmp_download_link, unsafe_allow_html=True)
             
 @st.cache(suppress_st_warning=True) 
@@ -104,7 +109,7 @@ def display_table(responses, hugin_names_result):
         check_names = st.beta_expander('Check names between the table and generated json')          
         df = turn_to_table(responses)        
         if to_table_container:
-            tmp_download_link = download_link(df, 'YOUR_DF.csv', 'Download as csv')
+            tmp_download_link = download_link(df, 'HUGINN_DF.csv', 'Download as csv')
             to_table_container.markdown(tmp_download_link, unsafe_allow_html=True)
             to_table_container.dataframe(df.style)   
             
@@ -113,7 +118,7 @@ def display_table(responses, hugin_names_result):
             cols = [col for col in df.columns]        
             missing_json = [key for key in (set(keys) - set(cols))]
             missing_table = [key for key in (set(cols) - set(keys))]
-            check_names.markdown(f'Present in the table not genereted json: {missing_json}', unsafe_allow_html=True)
+            check_names.markdown(f'Present in json but not in the table: {missing_json}', unsafe_allow_html=True)
             check_names.markdown(f'Present in table not genereted json: {missing_table}', unsafe_allow_html=True)   
 
 def select_keys(responses, hugin_names_result):    
@@ -144,92 +149,55 @@ def choose_keys(responses, hugin_names_result, include):
         selected_keys = list(set(all_keys) - set(selected_keys))
         
     new_dic = { new_key: hugin_names_result[new_key] for new_key in selected_keys }  
-    display_huginn_names(new_dic, file_name = 'huginn_names.json', csv = False)
+    display_huginn_names(new_dic, file_name = 'huginn_names.json')
     #meta_segm(responses, new_dic)
 
 def meta_segm(responses, hugin_names_result): 
     st.markdown('<p class="header">  Split into segments/meta </p', unsafe_allow_html=True) 
     choose_meta = st.radio('', ('No modification', 'Select all', 'Unselect all'))
 
-    if choose_meta == 'Select all' or choose_meta == 'Unselect all':        
-        all_keys = [key for key in hugin_names_result]
-        all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]
+    if choose_meta == 'Select all' or choose_meta == 'Unselect all': 
         
+        all_keys = [key for key in hugin_names_result]
+        all_path = [hugin_names_result[key]['value'] for key in hugin_names_result]        
         meta_fields = {}
         segments ={}
-        
         for key, path in zip(all_keys, all_path):    
             st.markdown('<p class="sep-line"> </p>', unsafe_allow_html=True)
-            col1, col2 = st.beta_columns(2)
-
             st.markdown(f'<p class="keys-font"> {key}</p>', unsafe_allow_html=True)
             
-            radio_name = (f'Meta ({key})', f'Segment ({key})', f'Exclude ({key})') if choose_meta=='Select all' else (f'Exclude ({key})', f'Meta ({key})', f'Segment ({key})')
+            display_key = f'{key[:50]}...' if len(key) > 50 else key
+            
+            radio_name = (f'Meta ({display_key})', f'Segment ({display_key})', f'Exclude ({display_key})') if choose_meta=='Select all' else (f'Exclude ({key})', f'Meta ({key})', f'Segment ({key})')
             met_or_seg = st.radio('', radio_name)
             
-            expand2 = st.button(f'expand {key}') 
+            expand2 = st.button(f'expand {display_key}') 
             if expand2:
-                expand2 = st.button(f'close {key} view')
+                expand2 = st.button(f'close  {display_key}')
                 uniques_val, table_counts = cnv.values_investigation(responses, path)                
                 st.markdown(f'{uniques_val[0]} unique values out of {uniques_val[1]}', unsafe_allow_html=True) 
                 st.dataframe(table_counts) 
-
-            if met_or_seg == f'Segment ({key})':
+                
+            if met_or_seg == f'Segment ({display_key})':
                 segments[key] = hugin_names_result[key]
             else:
                 meta_fields[key] = hugin_names_result[key]         
-
-        with st.beta_expander("Manually change meta"):
-                # for key in meta_fields:
-                #     new_meta_keys = st.text_input('', key)
-                #     new_meta_fields = st.text_area('', meta_fields[key])
-                    
-                meta_fields = st.text_area("", meta_fields)
                 
-        with st.beta_expander("Manually change segments"):
-                segments = st.text_area("", segments)  
-    
+        st.markdown('<p class="header"> User Meta </p>', unsafe_allow_html=True)
+        # with st.beta_expander("Manually change meta"):                 
+        #         meta_fields2 = st.text_area("", meta_fields)  
+        
+        display_huginn_names(meta_fields, 'huginn_meta.json', 'Download Meta')
 
+        
+        st.markdown('<p class="header"> Segments </p>', unsafe_allow_html=True)
+        # with st.beta_expander("Manually change segments"):
+        #         segments2 = st.text_area("", segments)  
+        display_huginn_names(segments, 'huginn_segments.json', 'Download Segments')
 
 
 initialise()
 
-# table_data = {'Column 1': [1, 2], 'Column 2': [3, 4]}
-
-# if st.button('delet dis'):
-#     del table_data
-#     st.write('mr button has delet for u')
-    
-# try:
-#     st.write(pd.DataFrame(data=table_data))
-# except:
-#     pass
-
-# # classifier_name = st.sidebar.selectbox(
-# #     'Select classifier',
-# #     ('KNN', 'SVM', 'Random Forest'))
-
-
-# #st.markdown('<p class="small-font"> some string </p>', unsafe_allow_html=True)
-# if st.button('put to sleep'):
-#     expensive_computation()
-
-def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
-def remote_css(url):
-    st.markdown(f'<link href="{url}" rel="stylesheet">', unsafe_allow_html=True)    
-
-def icon(icon_name):
-    st.markdown(f'<i class="material-icons">{icon_name}</i>', unsafe_allow_html=True)
-
-#local_css("styles.css")
-remote_css('https://fonts.googleapis.com/icon?family=Material+Icons')
-
-# icon("search")
-
-# button_clicked = st.button("OK")
 
 
 
