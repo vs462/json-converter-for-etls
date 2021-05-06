@@ -59,8 +59,14 @@ def initialise():
             
 def add_data_str(responses):   
     """ Add 'data' in front of each response """
+
+    if isinstance(responses, dict):
+        print('here')
+        new_responses = {'data': responses} 
+    else:  
+        new_responses = [{'data':resp} for resp in responses]
     
-    new_responses = [{'data':resp} for resp in responses]
+
     return new_responses
     
     
